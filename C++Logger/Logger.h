@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <typeinfo>
 #include <cstdarg>
 
 #include <filesystem>
@@ -17,54 +18,68 @@
 
 namespace files = std::filesystem;
 
+
+typedef struct {
+	const char* successPrefix;
+	const char* infoPrefix;
+	const char* warningPrefix;
+	const char* errorPrefix;
+} LoggerPrefixes, *pLoggerPrefixes;
+
+// [BaseType|MemAddr] - [Time] - [Prefix] : message
+
+typedef enum : unsigned char {
+	// base type name
+	LOGGER_VERBOSE_TYPE_NAME = 0x1,
+
+	// base instance address
+	LOGGER_VERBOSE_BASE_ADDR = 0x2,
+
+	// time of logged output
+	LOGGER_VERBOSE_TIME = 0x4
+} LoggerVerboseFlag;
+
 class Logger {
 private:
-	static bool __LOGGER_INIT__;
+	static bool __INIT_LOGGER__();
+	static const bool __LOGGER_INITD__;
 
-public:
-	static const char* DEFAULT_SUCCESS_PRE;
-	static const char* DEFAULT_INFO_PRE;
-	static const char* DEFAULT_WARN_PRE;
-	static const char* DEFAULT_ERROR_PRE;
+	static const LoggerPrefixes DEFAULT_PREFIXES;
 
 private:
-	// log file output stream (append)
-	std::ofstream fout;
+	std::ofstream _logFileAppendStream;
 
+	const char* _baseTypeName = NULL;
 
-	// string formatting buffer
-	size_t formatBufferLen = 32;
-	char* formatBuffer = new char[this->formatBufferLen];
+	const LoggerPrefixes* _prefixes;
 
+	unsigned char _verboseOpts;
 
-	// standard logger prefixes
-	const char* successPre = Logger::DEFAULT_SUCCESS_PRE;
-	const char* infoPre = Logger::DEFAULT_INFO_PRE;
-	const char* warnPre = Logger::DEFAULT_WARN_PRE;
-	const char* errorPre = Logger::DEFAULT_ERROR_PRE;
-
-private:
-	void logFormat(const char* format, va_list varArgs);
-	void logCstr(const char* cstr);
-	void logChar(const char c);
-
-	void logWithPrefix(const char* prefix, const char* format, va_list varArgs);
 
 public:
 	Logger(
 		const files::path& logFilePath = "",
-		const char* successPre = NULL,
-		const char* infoPre = NULL,
-		const char* warnPre = NULL,
-		const char* errorPre = NULL
+		unsigned char verboseOpts = LOGGER_VERBOSE_TYPE_NAME | LOGGER_VERBOSE_BASE_ADDR | LOGGER_VERBOSE_TIME,
+		const LoggerPrefixes& logPrefixes = Logger::DEFAULT_PREFIXES
 	);
-	//Logger(const Logger& lref);
-	~Logger();
 
-	void logSuccess(const char* format, ...);
-	void logInfo(const char* format, ...);
-	void logWarn(const char* format, ...);
-	void logError(const char* format, ...);
+	Logger(
+		const files::path& logFilePath = "",
+		const LoggerPrefixes& logPrefixes = Logger::DEFAULT_PREFIXES
+	);
+
+	template<typename BaseType>
+	Logger(
+		const files::path& logFilePath = "",
+		unsigned char verboseOpts = LOGGER_VERBOSE_TYPE_NAME | LOGGER_VERBOSE_BASE_ADDR | LOGGER_VERBOSE_TIME,
+		const LoggerPrefixes& logPrefixes = Logger::DEFAULT_PREFIXES
+	) : Logger(logFilePath, verboseOpts, logPrefixes) { 
+		this->baseTypeName = typeid(BaseType).name; 
+	}
+
+	Logger(const Logger& logRef);
+
+	~Logger();
 
 
 };
