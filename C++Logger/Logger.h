@@ -10,8 +10,8 @@
 #include "Ansi.h"
 
 #include <iostream>
-#include <fstream>
 #include <typeinfo>
+#include <fstream>
 #include <cstdarg>
 #include <vector>
 
@@ -28,6 +28,7 @@ typedef struct {
 	const char* errorPrefix;
 	const char* instanceInfoPrefix;
 } LoggerPrefixes, *pLoggerPrefixes;
+
 
 class Logger {
 private:

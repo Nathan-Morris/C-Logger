@@ -158,6 +158,7 @@ void Logger::logInformation(const char* format, ...) {
 	this->logPrefix(this->DEFAULT_LOGGER_PREFIXES.informationPrefix, format, varArgs);
 	va_end(varArgs);
 }
+
 void Logger::logWarning(const char* format, ...) {
 	va_list varArgs;
 	va_start(varArgs, format);
