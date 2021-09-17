@@ -2,7 +2,9 @@
 
 
 int main() {
-	Logger log(R"(C:/Users/natha/Desktop/output.log)");
+	int i = 10;
+	Logger log(&i, R"(C:/Users/natha/Desktop/output.log)");
+	log.addOutputStream(fopen(R"(C:/Users/natha/Desktop/re.txt)", "w"));
 	log.logSuccess("success");
 	log.logWarning("Warning");
 }

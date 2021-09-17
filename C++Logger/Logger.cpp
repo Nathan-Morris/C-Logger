@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "Logger.h"
 
 const bool Logger::__LOGGER_IS_INITD__ = Logger::__LOGGER_INIT__();
 
@@ -19,13 +19,18 @@ Logger::Logger(
 	const LoggerPrefixes* prefixes
 ) {
 	if (logFilePath) {
-		this->_logFilePath = files::path(logFilePath);
+		FILE* logFileOutputStream;
+		files::path logFilePathType(logFilePath);
 
-		if (!files::exists(this->_logFilePath) && this->_logFilePath.has_parent_path()) {
-			files::create_directories(this->_logFilePath.parent_path());
+		if (!files::exists(logFilePathType) && logFilePathType.has_parent_path()) {
+			files::create_directories(logFilePathType.parent_path());
 		}
 
-		this->_logFileAppendStream = std::ofstream(this->_logFilePath, std::ios::app);
+		logFileOutputStream = fopen(logFilePath, "a");
+
+		if (logFileOutputStream) {
+			this->_logOutputStreams.push_back(logFileOutputStream);
+		}
 	}
 
 	if (prefixes) {
@@ -42,8 +47,10 @@ Logger::Logger(
 Logger::Logger() : Logger(NULL, NULL) { }
 
 Logger::~Logger() {
-	if (this->_logFileAppendStream.is_open()) {
-		this->_logFileAppendStream.close();
+	for (FILE* logOutputStream : this->_logOutputStreams) {
+		if (logOutputStream != stdout && logOutputStream != stderr) {
+			fclose(logOutputStream);
+		}
 	}
 }
 
@@ -52,41 +59,45 @@ Logger::~Logger() {
 //
 
 void Logger::logChar(const char c) {
-	if (this->_logFileAppendStream.is_open()) {
-		this->_logFileAppendStream.put(c);
+	for (FILE* logOutputStream : this->_logOutputStreams) {
+		fputc(c, logOutputStream);
 	}
-
-	fputc(c, stdout);
 }
 
 void Logger::logString(const char* cstr) {
 	bool ansiStyleFlag;
 
-	if (this->_logFileAppendStream.is_open()) {
-		ansiStyleFlag = false;
+	for (FILE* logOutputStream : this->_logOutputStreams) {
+		if (logOutputStream == NULL) {
+			continue;
+		}
 
-		for (size_t i = 0; cstr[i]; i++) {
-			switch (cstr[i])
-			{
-			case '\u001b':
-				ansiStyleFlag = true;
-				continue;
-
-			case 'm':
-				if (ansiStyleFlag) {
-					ansiStyleFlag = false;
+		if (logOutputStream == stdout || logOutputStream == stderr) {
+			fputs(cstr, logOutputStream);
+		}
+		else {
+			ansiStyleFlag = false;
+			for (size_t i = 0; cstr[i]; i++) {
+				switch (cstr[i])
+				{
+				case '\u001b':
+					ansiStyleFlag = true;
 					continue;
-				}
 
-			default:
-				if (!ansiStyleFlag) {
-					this->_logFileAppendStream.put(cstr[i]);
+				case 'm':
+					if (ansiStyleFlag) {
+						ansiStyleFlag = false;
+						continue;
+					}
+
+				default:
+					if (!ansiStyleFlag) {
+						fputc(cstr[i], logOutputStream);
+					}
 				}
 			}
 		}
 	}
-
-	fputs(cstr, stdout);
 }
 
 void Logger::logVarFormat(const char* format, va_list varArgs) {
@@ -120,6 +131,19 @@ void Logger::logPrefix(const char* prefix, const char* format, va_list varArgs) 
 //
 //
 //
+
+Logger& Logger::addOutputStream(FILE* logOutputStreamToAdd) {
+	for (FILE* logOutputStream : this->_logOutputStreams) {
+		if (logOutputStream == logOutputStreamToAdd) {
+			goto out;
+		}
+	}
+
+	this->_logOutputStreams.push_back(logOutputStreamToAdd);
+
+out:
+	return *this;
+}
 
 void Logger::logSuccess(const char* format, ...) {
 	va_list varArgs;

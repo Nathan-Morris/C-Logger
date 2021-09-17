@@ -1,6 +1,8 @@
 #ifndef _LOGGER_
 #define _LOGGER_
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #ifdef _WIN32
 #	include <Windows.h>
 #endif
@@ -11,6 +13,7 @@
 #include <fstream>
 #include <typeinfo>
 #include <cstdarg>
+#include <vector>
 
 #include <filesystem>
 
@@ -47,8 +50,7 @@ private:
 	static const LoggerPrefixes DEFAULT_LOGGER_PREFIXES;
 
 private:
-	std::ofstream _logFileAppendStream;
-	files::path _logFilePath;
+	std::vector<FILE*> _logOutputStreams = { stdout };
 
 	const char* _baseTypeName = NULL;
 	
@@ -106,6 +108,8 @@ protected:
 
 public:
 
+	Logger& addOutputStream(FILE* logOutputStream);
+
 	void logSuccess(const char* format, ...);
 	void logInformation(const char* format, ...);
 	void logWarning(const char* format, ...);
@@ -114,6 +118,7 @@ public:
 	void logInstanceState() = delete;
 
 public:
+
 	Logger& operator=(const Logger& lref) = delete;
 
 };
